@@ -72,7 +72,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_mk'])) {
             </div>
             <div class="mb-3">
                 <label for="sks" class="form-label">Jumlah SKS</label>
-                <input type="number" class="form-control" id="sks" name="sks" required>
+                <select id="sks" name="sks" class="form-select" required>
+                    <option value="">Pilih SKS</option>
+                    <option value="2">2 SKS</option>
+                    <option value="3">3 SKS</option>
+                </select>
             </div>
             <div class="mb-3">
                 <label for="semester" class="form-label">Semester</label>
