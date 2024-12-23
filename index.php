@@ -174,24 +174,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             margin-bottom: 0;
         }
 
-        .announcement {
-            background-color: #fff3cd;
-            border-left: 4px solid #ffc107;
-            padding: 1.5rem;
-            margin-top: 1.5rem;
-            border-radius: 4px;
-        }
-
-        .announcement h5 {
-            color: #664d03;
-            margin-bottom: 0.75rem;
-        }
-
-        .announcement p {
-            color: #664d03;
-            margin-bottom: 0;
-        }
-
         .input-group-text {
             background-color: transparent;
             border-left: none;
@@ -260,15 +242,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         <ul>
                             <li>Mahasiswa: Gunakan NIM sebagai username</li>
                             <li>Dosen: Gunakan NIP sebagai username</li>
-                            <li>Format password default: YYYY-MM-DD (tanggal lahir)</li>
                         </ul>
-                    </div>
-
-                    <div class="announcement">
-                        <h5>
-                            <i class="fas fa-bullhorn me-2"></i>Pengumuman
-                        </h5>
-                        <p>Sistem akan mengalami pemeliharaan rutin pada tanggal 25 December 2024 pukul 00:00 - 03:00 WIB.</p>
                     </div>
                 </div>
             </div>
