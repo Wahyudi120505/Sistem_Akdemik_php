@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $email = mysqli_real_escape_string($conn, $_POST['email']);
     $no_telepon = mysqli_real_escape_string($conn, $_POST['no_telepon']);
     $jabatan = mysqli_real_escape_string($conn, $_POST['jabatan']);
-    $password = mysqli_real_escape_string($conn, $_POST['password']); // Ambil password dari form
+    $password = mysqli_real_escape_string($conn, $_POST['password']); 
 
     // Enkripsi password menggunakan bcrypt
     $hashed_password = password_hash($password, PASSWORD_BCRYPT);

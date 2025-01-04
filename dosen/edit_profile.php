@@ -1,67 +1,71 @@
 <?php
-session_start();
-include('../../config/koneksi.php'); // Pastikan koneksi database sudah benar
+    session_start();
+    include('../config/koneksi.php'); // Pastikan untuk menyertakan file koneksi database
+    
+    // Cek apakah user sudah login dan memiliki peran 'dosen'
+    if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'dosen') {
+        header("Location: ../index.php");
+        exit;
+    }
+    
+    // Mengambil username dari session
+    $user_id = $_SESSION['user_id'];
+    $query_users = "SELECT username,password FROM users WHERE id = '$user_id'";
+    $result_user = mysqli_query($conn, $query_users);
 
-// Cek apakah user sudah login dan memiliki peran 'admin'
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
-    header("Location: ../index.php");
-    exit;
-}
-
-// Mengambil ID dosen dari URL
-if (!isset($_GET['id'])) {
-    echo "ID dosen tidak ditemukan.";
-    exit;
-}
-$id_dosen = $_GET['id'];
-
-// Ambil data dosen berdasarkan ID
-$query_dosen = "SELECT * FROM dosen WHERE id = '$id_dosen'";
-$result_dosen = mysqli_query($conn, $query_dosen);
-if (!$result_dosen || mysqli_num_rows($result_dosen) == 0) {
-    echo "Dosen tidak ditemukan.";
-    exit;
-}
-$dosen = mysqli_fetch_assoc($result_dosen);
-
-// Mengambil data user terkait untuk edit password
-$query_user = "SELECT * FROM users WHERE id = '{$dosen['user_id']}'";
-$result_user = mysqli_query($conn, $query_user);
-$user = mysqli_fetch_assoc($result_user);
+    // Cek apakah query berhasil dijalankan
+    if ($result_user && mysqli_num_rows($result_user) > 0) {
+        $user = mysqli_fetch_assoc($result_user);
+        $username = $user['username'];
+        $password = mysqli_real_escape_string($conn,$user['password']);
+        
+        // Mengambil data dosen yang sesuai dengan username
+        $query_dosen = "SELECT * FROM dosen WHERE nip = '$username'";
+        $result = mysqli_query($conn, $query_dosen);
+        
+        // Mengambil data dosen ke dalam array
+        if ($result && mysqli_num_rows($result) > 0) {
+            $dosen = mysqli_fetch_assoc($result);
+        } else {
+            echo "Data dosen tidak ditemukan.";
+            exit;
+        }
+    } else {
+        echo "Pengguna tidak ditemukan.";
+        exit;
+    }
 
 // Proses edit data
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $nip = mysqli_real_escape_string($conn, $_POST['nip']);
+    // Ambil data yang perlu diubah
     $nama = mysqli_real_escape_string($conn, $_POST['nama']);
     $email = mysqli_real_escape_string($conn, $_POST['email']);
     $no_telepon = mysqli_real_escape_string($conn, $_POST['no_telepon']);
-    $jabatan = mysqli_real_escape_string($conn, $_POST['jabatan']);
     $password = mysqli_real_escape_string($conn, $_POST['password']);
-
-    // Cek apakah NIP sudah digunakan oleh user lain
-    $query_check_nip = "SELECT * FROM users WHERE username = '$nip' AND id != '{$dosen['user_id']}'";
-    $result_check_nip = mysqli_query($conn, $query_check_nip);
-    $query_check_duplicate = "SELECT * FROM dosen WHERE (email = '$email' OR no_telepon = '$no_telepon')";
+    
+    // Mengecek apakah email atau no telepon sudah digunakan oleh dosen lain
+    $query_check_duplicate = "SELECT * FROM dosen WHERE (email = '$email' OR no_telepon = '$no_telepon') AND nip != '$username'";
     $result_check_duplicate = mysqli_query($conn, $query_check_duplicate);
-
-    if (mysqli_num_rows($result_check_nip) > 0 || mysqli_num_rows($result_check_duplicate) > 0) {
-        $error_message = "NIP / Email / No Tlpn sudah digunakan oleh user lain. Silakan pilih NIP yang lain.";
+    
+    if ($result_check_duplicate && mysqli_num_rows($result_check_duplicate) > 0) {
+        $error_message = "Email atau nomor telepon sudah digunakan oleh dosen lain.";
     } else {
         // Update data user (termasuk password jika diubah)
         if ($password != "") {
             $hashed_password = password_hash($password, PASSWORD_BCRYPT);
-            $query_user_update = "UPDATE users SET username = '$nip', password = '$hashed_password' WHERE id = '{$dosen['user_id']}'";
+            $query_user_update = "UPDATE users SET password = '$hashed_password' WHERE id = '$user_id'";  // Gunakan $user_id dari session
         } else {
-            $query_user_update = "UPDATE users SET username = '$nip' WHERE id = '{$dosen['user_id']}'";
+            // Jika tidak ada perubahan password, jangan jalankan query ini
+            $query_user_update = null;
         }
 
-        if (!mysqli_query($conn, $query_user_update)) {
+        if ($query_user_update && !mysqli_query($conn, $query_user_update)) {
             $error_message = "Terjadi kesalahan saat memperbarui data user.";
         } else {
-            // Update data dosen
-            $query_dosen_update = "UPDATE dosen SET nip = '$nip', nama = '$nama', email = '$email', no_telepon = '$no_telepon', jabatan = '$jabatan' WHERE id = '$id_dosen'";
+            // Update data dosen (tidak mengubah nip dan jabatan)
+            $query_dosen_update = "UPDATE dosen SET nama = '$nama', email = '$email', no_telepon = '$no_telepon' WHERE nip = '$username'"; 
             if (mysqli_query($conn, $query_dosen_update)) {
-                header("Location: dosen.php");
+                header("Location: home.php");
                 exit;
             } else {
                 $error_message = "Terjadi kesalahan saat memperbarui data dosen.";
@@ -69,8 +73,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
     }
 }
-?>
 
+?>    
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -155,7 +159,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <body>
 <nav class="navbar navbar-expand-lg navbar-dark mb-4">
     <div class="container">
-        <a class="navbar-brand" href="../dashboard.php">
+        <a class="navbar-brand" href="home.php">
             <i class="fas fa-university me-2"></i>
             Sistem Akademik
         </a>
@@ -170,12 +174,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <?php endif; ?>
 
 <div class="container mt-4">
-    <h1 class="mb-4">Edit Dosen</h1>
-    <form method="POST" action="edit_dosen.php?id=<?= $id_dosen ?>" class="card p-4 shadow-sm">
-        <div class="mb-3">
-            <label for="nip" class="form-label">NIP</label>
-            <input type="text" class="form-control" id="nip" name="nip" value="<?= $dosen['nip'] ?>" required>
-        </div>
+    <h1 class="mb-4">Edit Profile</h1>
+    <form method="POST" action="edit_profile.php" class="card p-4 shadow-sm">
         <div class="mb-3">
             <label for="nama" class="form-label">Nama Dosen</label>
             <input type="text" class="form-control" id="nama" name="nama" value="<?= $dosen['nama'] ?>" required>
@@ -189,27 +189,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             <input type="text" class="form-control" id="no_telepon" name="no_telepon" value="<?= $dosen['no_telepon'] ?>" required>
         </div>
         <div class="mb-3">
-            <label for="jabatan" class="form-label">Jabatan</label>
-            <select class="form-select" id="jabatan" name="jabatan" required>
-                <option value="Dosen" <?= ($dosen['jabatan'] == 'Dosen') ? 'selected' : ''; ?>>Dosen</option>
-                <option value="Koordinator Prodi" <?= ($dosen['jabatan'] == 'Koordinator Prodi') ? 'selected' : ''; ?>>Koordinator Prodi</option>
-                <option value="Ketua Program Studi" <?= ($dosen['jabatan'] == 'Ketua Program Studi') ? 'selected' : ''; ?>>Ketua Program Studi</option>
-                <option value="Sekretaris Program Studi" <?= ($dosen['jabatan'] == 'Sekretaris Program Studi') ? 'selected' : ''; ?>>Sekretaris Program Studi</option>
-                <option value="Dekan Fakultas" <?= ($dosen['jabatan'] == 'Dekan Fakultas') ? 'selected' : ''; ?>>Dekan Fakultas</option>
-                <option value="Wakil Dekan" <?= ($dosen['jabatan'] == 'Wakil Dekan') ? 'selected' : ''; ?>>Wakil Dekan</option>
-                <option value="Rektor" <?= ($dosen['jabatan'] == 'Rektor') ? 'selected' : ''; ?>>Rektor</option>
-                <option value="Wakil Rektor" <?= ($dosen['jabatan'] == 'Wakil Rektor') ? 'selected' : ''; ?>>Wakil Rektor</option>
-                <option value="Direktur" <?= ($dosen['jabatan'] == 'Direktur') ? 'selected' : ''; ?>>Direktur</option>
-                <option value="Pembantu Direktur" <?= ($dosen['jabatan'] == 'Pembantu Direktur') ? 'selected' : ''; ?>>Pembantu Direktur</option>
-            </select>
-        </div>
-        <div class="mb-3">
             <label for="password" class="form-label">Password (Kosongkan jika tidak ingin mengubah)</label>
             <input type="password" class="form-control" id="password" name="password">
         </div>
         <div class="d-flex justify-content-between">
             <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
-            <a href="dosen.php" class="btn btn-secondary">Batal</a>
+            <a href="home.php" class="btn btn-secondary">Batal</a>
         </div>
     </form>
 </div>
