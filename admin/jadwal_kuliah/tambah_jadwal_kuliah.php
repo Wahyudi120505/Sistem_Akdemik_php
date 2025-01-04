@@ -21,18 +21,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Cek apakah sudah ada jadwal kuliah yang sama
     $query_check = "SELECT * FROM jadwal_kuliah 
-                    WHERE hari = ? 
-                    AND (
-                        (jam_mulai BETWEEN ? AND ?) 
-                        OR (jam_selesai BETWEEN ? AND ?) 
-                        OR (? BETWEEN jam_mulai AND jam_selesai)
-                    )
-                    AND ruangan = ?";
-
-    $stmt_check = $conn->prepare($query_check);
-    $stmt_check->bind_param("sssssss", $hari, $jam_mulai, $jam_selesai, $jam_mulai, $jam_selesai, $jam_mulai, $ruangan);
-    $stmt_check->execute();
-    $result_check = $stmt_check->get_result();
+    WHERE hari = ? 
+    AND (
+        (jam_mulai BETWEEN ? AND ?) 
+        OR (jam_selesai BETWEEN ? AND ?) 
+        OR (? BETWEEN jam_mulai AND jam_selesai)
+    )
+    AND (ruangan = ? OR id_dosen = ?)"; // Menambahkan kondisi untuk mengecek dosen yang sama
+$stmt_check = $conn->prepare($query_check);
+$stmt_check->bind_param("ssssssss", $hari, $jam_mulai, $jam_selesai, $jam_mulai, $jam_selesai, $jam_mulai, $ruangan, $dosen);
+$stmt_check->execute();
+$result_check = $stmt_check->get_result();
 
     if ($result_check->num_rows > 0) {
         // Jika ada tabrakan jadwal
@@ -74,17 +73,100 @@ $result_ruangan = mysqli_query($conn, $query_ruangan);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tambah Jadwal Kuliah</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #2ecc71;
+            --warning-color: #f1c40f;
+            --danger-color: #e74c3c;
+            --light-gray: #f8f9fa;
+            --dark-gray: #343a40;
+        }
+
+        body {
+            background-color: #f4f6f9;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background-color: var(--primary-color) !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 1rem 0;
+        }
+
+        .navbar-brand {
+            font-weight: 600;
+            font-size: 1.5rem;
+            color: white !important;
+        }
+
+        .nav-link {
+            color: rgba(255, 255, 255, 0.9) !important;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .nav-link:hover {
+            color: white !important;
+            transform: translateY(-1px);
+        }
+
+        #error_message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: var(--danger-color);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            font-weight: 500;
+            z-index: 1050;
+            animation: slideIn 0.5s ease, fadeOut 0.5s 3s forwards;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+            }
+            to {
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes fadeOut {
+            to {
+                opacity: 0;
+                visibility: hidden;
+            }
+        }
+    </style>
 </head>
 <body>
-    <div class="container mt-5">
-        <h2>Tambah Jadwal Kuliah</h2>
-        
-        <!-- Tampilkan pesan kesalahan jika ada -->
-        <?php if ($error_message): ?>
-            <div class="alert alert-danger"> <?= $error_message; ?> </div>
-        <?php endif; ?>
+    <nav class="navbar navbar-expand-lg navbar-dark mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="../dashboard.php">
+                <i class="fas fa-university me-2"></i>
+                Sistem Akademik
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            </div>
+        </div>
+    </nav>
 
-        <form method="POST">
+    <?php if (!empty($error_message)): ?>
+        <div id="error_message"> <?= $error_message ?> </div>
+    <?php endif; ?>
+
+    <div class="container mt-4">
+        <h1 class="mb-4">Tambah Jadwak Kuliah</h1>
+        <form method="POST" action="tambah_jadwal_kuliah.php" class="card p-4 shadow-sm">
             <div class="mb-3">
                 <label for="mata_kuliah" class="form-label">Mata Kuliah</label>
                 <select id="mata_kuliah" name="mata_kuliah" class="form-select" required>
@@ -134,12 +216,15 @@ $result_ruangan = mysqli_query($conn, $query_ruangan);
                 <select id="ruangan" name="ruangan" class="form-select" required>
                     <option value="">Pilih Ruangan</option>
                     <?php while ($row = mysqli_fetch_assoc($result_ruangan)): ?>
-                        <option value="<?= $row['id']; ?>"> <?= $row['nama_ruangan']; ?> </option>
+                        <option value="<?= $row['nama_ruangan']; ?>"> <?= $row['nama_ruangan']; ?> </option>
                     <?php endwhile; ?>
                 </select>
             </div>
 
-            <button type="submit" class="btn btn-primary">Simpan</button>
+            <div class="d-flex justify-content-between">
+                <button type="submit" class="btn btn-primary">Tambah Dosen</button>
+                <a href="jadwal_kuliah.php" class="btn btn-secondary">Batal</a>
+            </div>        
         </form>
     </div>
 

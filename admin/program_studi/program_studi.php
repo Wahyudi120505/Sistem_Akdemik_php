@@ -192,11 +192,14 @@ $result = mysqli_query($conn, $query);
             color: var(--primary-color);
             font-weight: 600;
             padding: 1rem;
+            text-align: center;
+            vertical-align: middle;
         }
 
         .table tbody td {
             padding: 1rem;
             vertical-align: middle;
+            text-align: center;
         }
 
         .btn-action {
@@ -258,7 +261,7 @@ $result = mysqli_query($conn, $query);
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark mb-4">
         <div class="container">
-            <a class="navbar-brand" href="#">
+            <a class="navbar-brand" href="../dashboard.php">
                 <i class="fas fa-university me-2"></i>
                 Sistem Akademik
             </a>
@@ -267,12 +270,6 @@ $result = mysqli_query($conn, $query);
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto align-items-center">
-                    <li class="nav-item">
-                        <a class="nav-link" href="../dashboard.php">
-                            <i class="fas fa-tachometer-alt me-1"></i>
-                            Dashboard
-                        </a>
-                    </li>
                     <li class="nav-item">
                         <form class="search-form" action="" method="GET">
                             <input class="form-control" type="text" name="search" placeholder="Cari Program Studi..." value="<?php echo htmlspecialchars($search); ?>">
@@ -328,6 +325,9 @@ $result = mysqli_query($conn, $query);
                     </thead>
                     <tbody>
                         <?php
+                        if (empty($result)) {
+                            echo "<tr><td colspan='6' class='text-center'>Tidak ada data mahasiswa.</td></tr>";
+                        } else {
                         $no = 1;
                         while ($row = mysqli_fetch_assoc($result)) {
                             echo "<tr>";
@@ -346,7 +346,7 @@ $result = mysqli_query($conn, $query);
                                   </td>";
                             echo "</tr>";
                             $no++;
-                        }
+                        }}
                         ?>
                     </tbody>
                 </table>
@@ -354,6 +354,5 @@ $result = mysqli_query($conn, $query);
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
