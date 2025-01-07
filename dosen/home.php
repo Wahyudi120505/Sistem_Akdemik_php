@@ -158,7 +158,7 @@
                         <i class="fas fa-tasks feature-icon"></i>
                         <h5 class="card-title mb-3">Buat Soal</h5>
                         <p class="card-text flex-grow-1">Buat soal tugas, kuis, UTS, atau UAS untuk mahasiswa.</p>
-                        <a href="buat_soal.php" class="btn btn-primary mt-auto">
+                        <a href="soal/soal.php" class="btn btn-primary mt-auto">
                             <i class="fas fa-plus me-1"></i>
                             Buat Soal
                         </a>

@@ -47,6 +47,8 @@ CREATE TABLE mata_kuliah (
     sks INT NOT NULL,
     semester INT NOT NULL,
     id_prodi INT NOT NULL,
+    id_dosen INT NOT NULL,
+    ADD FOREIGN KEY (id_dosen) REFERENCES dosen(id) ON DELETE SET NULL,
     FOREIGN KEY (id_prodi) REFERENCES program_studi(id) ON DELETE CASCADE
 );
 
@@ -98,6 +100,17 @@ CREATE TABLE semester (
     tahun_ajaran VARCHAR(10) NOT NULL
 );
 
+CREATE TABLE absensi (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    jadwal_id INT NOT NULL,
+    mahasiswa_id INT NOT NULL,
+    status_absen ENUM('hadir', 'tidak hadir', 'izin', 'alfa') NOT NULL,
+    waktu_absen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (jadwal_id) REFERENCES jadwal_kuliah(id),
+    FOREIGN KEY (mahasiswa_id) REFERENCES mahasiswa(id)
+);
+
+
 CREATE TABLE jenis_soal (
     id INT AUTO_INCREMENT PRIMARY KEY,
     nama VARCHAR(50) NOT NULL -- ('Tugas', 'Kuis', 'UTS', 'UAS')
@@ -112,7 +125,7 @@ CREATE TABLE bank_soal (
     deskripsi TEXT,
     tanggal_dibuat DATETIME DEFAULT CURRENT_TIMESTAMP,
     batas_waktu DATETIME,
-    STATUS ENUM('draft', 'published') DEFAULT 'draft',
+    STATUS ENUM('aktif', 'tidak aktif') DEFAULT 'aktif',
     FOREIGN KEY (id_dosen) REFERENCES dosen(id) ON DELETE CASCADE,
     FOREIGN KEY (id_mata_kuliah) REFERENCES mata_kuliah(id) ON DELETE CASCADE,
     FOREIGN KEY (id_jenis_soal) REFERENCES jenis_soal(id)
@@ -122,17 +135,8 @@ CREATE TABLE soal (
     id INT AUTO_INCREMENT PRIMARY KEY,
     id_bank_soal INT NOT NULL,
     pertanyaan TEXT NOT NULL,
-    jenis_pertanyaan ENUM('pilihan_ganda', 'essay') NOT NULL,
     bobot_nilai DECIMAL(5,2) NOT NULL,
     FOREIGN KEY (id_bank_soal) REFERENCES bank_soal(id) ON DELETE CASCADE
-);
-
-CREATE TABLE pilihan_jawaban (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    id_soal INT NOT NULL,
-    teks_pilihan TEXT NOT NULL,
-    is_jawaban_benar BOOLEAN NOT NULL DEFAULT FALSE,
-    FOREIGN KEY (id_soal) REFERENCES soal(id) ON DELETE CASCADE
 );
 
 -- Insert basic exam types
@@ -141,34 +145,3 @@ INSERT INTO jenis_soal (nama) VALUES
 ('Kuis'),
 ('UTS'),
 ('UAS');
-
--- Admin User
-INSERT INTO users (username, PASSWORD, role) VALUES 
-('admin', 'admin123', 'admin');
-
--- Program Studi
-INSERT INTO program_studi (nama_prodi, fakultas) VALUES 
-('Teknik Informatika', 'Fakultas Teknik'),
-('Sistem Informasi', 'Fakultas Teknik');
-
--- Mahasiswa
-INSERT INTO users (username, PASSWORD, role) VALUES 
-('mahasiswa1', 'mahasiswa123', 'mahasiswa');
-
-INSERT INTO mahasiswa (nim, nama, tanggal_lahir, alamat, email, no_telepon, angkatan, id_prodi, user_id) VALUES 
-('123456789', 'Budi Santoso', '2000-01-01', 'Jl. Merdeka', 'budi@example.com', '081234567890', 2020, 1, 2);
-
--- Dosen
-INSERT INTO users (username, PASSWORD, role) VALUES 
-('dosen1', 'dosen123', 'dosen');
-
-INSERT INTO dosen (nip, nama, email, no_telepon, jabatan, user_id) VALUES 
-('1987654321', 'Dr. Andi', 'andi@example.com', '081298765432', 'Dosen Tetap', 3);
-
--- Insert data KRS untuk mahasiswa
-INSERT INTO krs (id_mahasiswa, id_mata_kuliah, semester, tahun_ajaran) 
-VALUES 
-(7, 5, 1, '2023/2024'),  -- Semester 1, Tahun Ajaran 2023/2024 untuk mahasiswa 2
-(8, 6, 1, '2023/2024');   -- Semester 1, Tahun Ajaran 2023/2024 untuk mahasiswa 2
-
-
