@@ -171,7 +171,7 @@
                         <i class="fas fa-book feature-icon"></i>
                         <h5 class="card-title mb-3">Mata Kuliah</h5>
                         <p class="card-text flex-grow-1">Daftar mata kuliah yang Anda ajar.</p>
-                        <a href="#" class="btn btn-primary mt-auto">
+                        <a href="matkul/matkul.php" class="btn btn-primary mt-auto">
                             <i class="fas fa-list me-1"></i>
                             Lihat Mata Kuliah
                         </a>

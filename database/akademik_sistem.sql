@@ -48,7 +48,7 @@ CREATE TABLE mata_kuliah (
     semester INT NOT NULL,
     id_prodi INT NOT NULL,
     id_dosen INT NOT NULL,
-    ADD FOREIGN KEY (id_dosen) REFERENCES dosen(id) ON DELETE SET NULL,
+    FOREIGN KEY (id_dosen) REFERENCES dosen(id) ON DELETE SET NULL,
     FOREIGN KEY (id_prodi) REFERENCES program_studi(id) ON DELETE CASCADE
 );
 
@@ -139,9 +139,41 @@ CREATE TABLE soal (
     FOREIGN KEY (id_bank_soal) REFERENCES bank_soal(id) ON DELETE CASCADE
 );
 
+
 -- Insert basic exam types
 INSERT INTO jenis_soal (nama) VALUES 
 ('Tugas'),
 ('Kuis'),
 ('UTS'),
 ('UAS');
+
+-- Admin User
+INSERT INTO users (username, PASSWORD, role) VALUES 
+('admin', 'admin123', 'admin');
+
+-- Program Studi
+INSERT INTO program_studi (nama_prodi, fakultas) VALUES 
+('Teknik Informatika', 'Fakultas Teknik'),
+('Sistem Informasi', 'Fakultas Teknik');
+
+-- Mahasiswa
+INSERT INTO users (username, password, role) VALUES 
+('mahasiswa1', 'mahasiswa123', 'mahasiswa');
+
+INSERT INTO mahasiswa (nim, nama, tanggal_lahir, alamat, email, no_telepon, angkatan, id_prodi, user_id) VALUES 
+('123456789', 'Budi Santoso', '2000-01-01', 'Jl. Merdeka', 'budi@example.com', '081234567890', 2020, 1, 2);
+
+-- Dosen
+INSERT INTO users (username, password, role) VALUES 
+('dosen1', 'dosen123', 'dosen');
+
+INSERT INTO dosen (nip, nama, email, no_telepon, jabatan, user_id) VALUES 
+('1987654321', 'Dr. Andi', 'andi@example.com', '081298765432', 'Dosen Tetap', 3);
+
+-- Insert data KRS untuk mahasiswa
+INSERT INTO krs (id_mahasiswa, id_mata_kuliah, semester, tahun_ajaran) 
+VALUES 
+(7, 5, 1, '2023/2024'),  -- Semester 1, Tahun Ajaran 2023/2024 untuk mahasiswa 2
+(8, 6, 1, '2023/2024');   -- Semester 1, Tahun Ajaran 2023/2024 untuk mahasiswa 2
+
+

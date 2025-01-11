@@ -16,6 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $sks = mysqli_real_escape_string($conn, $_POST['sks']);
     $semester = mysqli_real_escape_string($conn, $_POST['semester']);
     $id_prodi = mysqli_real_escape_string($conn, $_POST['id_prodi']);
+    $id_dosen = mysqli_real_escape_string($conn, $_POST['id_dosen']);
 
     // Cek apakah kode_mk atau nama_mk sudah ada dalam database
     $check_query = "SELECT * FROM mata_kuliah WHERE kode_mk = ? OR nama_mk = ?";
@@ -28,10 +29,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $error_message = "Kode Mata Kuliah atau Nama Mata Kuliah sudah ada. Silakan masukkan data yang berbeda.";
     } else {
         // Jika tidak ada duplikasi, lanjutkan menambah data
-        $query = "INSERT INTO mata_kuliah (kode_mk, nama_mk, sks, semester, id_prodi) 
-                  VALUES (?, ?, ?, ?, ?)";
+        $query = "INSERT INTO mata_kuliah (kode_mk, nama_mk, sks, semester, id_prodi, id_dosen) 
+                  VALUES (?, ?, ?, ?, ?, ?)";
         if ($stmt = mysqli_prepare($conn, $query)) {
-            mysqli_stmt_bind_param($stmt, "ssiii", $kode_mk, $nama_mk, $sks, $semester, $id_prodi);
+            mysqli_stmt_bind_param($stmt, "ssiiii", $kode_mk, $nama_mk, $sks, $semester, $id_prodi, $id_dosen);
             if (mysqli_stmt_execute($stmt)) {
                 echo "<script>alert('Mata kuliah berhasil ditambahkan'); window.location.href='matkul.php';</script>";
             } else {
@@ -187,6 +188,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     $prodi_result = mysqli_query($conn, $prodi_query);
                     while ($row = mysqli_fetch_assoc($prodi_result)) {
                         echo "<option value='" . $row['id'] . "'>" . $row['nama_prodi'] . "</option>";
+                    }
+                    ?>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="dosen" class="form-label">Dosen Pengajar</label>
+                <select id="dosen" name="id_dosen" class="form-select" required>
+                    <option value="">Pilih Dosen</option>
+                    <?php
+                    // Ambil data dosen
+                    $dosen_query = "SELECT * FROM dosen";
+                    $result_dosen = mysqli_query($conn, $dosen_query);
+                    while ($row = mysqli_fetch_assoc($result_dosen)) {
+                        echo "<option value='" . $row['id'] . "'>" . $row['nama'] . "</option>";
                     }
                     ?>
                 </select>
