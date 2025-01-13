@@ -24,7 +24,7 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
     $soal_id = $_GET['id'];
     $query_soal = "SELECT * FROM bank_soal bs JOIN soal s ON bs.id = s.id_bank_soal WHERE s.id = '$soal_id'";
     $result_soal = mysqli_query($conn, $query_soal);
-
+    
     if ($result_soal && mysqli_num_rows($result_soal) > 0) {
         $soal = mysqli_fetch_assoc($result_soal);
     } else {
@@ -43,10 +43,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $id_jenis_soal = $_POST['id_jenis_soal'];
     $judul = $_POST['judul'];
     $deskripsi = $_POST['deskripsi'];
-
+    
     // Jika file soal baru diupload
     if (!empty($file_soal)) {
-        move_uploaded_file($lokasi, "file_soal/$file_soal"); 
+        move_uploaded_file($lokasi, "file_soal/$file_soal");
+        
+        $file_path = "file_soal/" . $soal['file_soal'];
+        if (file_exists($file_path)) {
+            unlink($file_path); // Hapus file dari folder
+        }
+
     } else {
         $file_soal = $soal['pertanyaan']; // Tetap menggunakan file soal lama
     }
@@ -76,9 +82,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
    
     $query_bank_soal = "UPDATE bank_soal 
                     SET id_dosen = '$dosen_id', id_mata_kuliah = '$id_mata_kuliah', id_jenis_soal = '$id_jenis_soal', 
-                        judul = '$judul', deskripsi = '$deskripsi', batas_waktu = '$batas_waktu' 
+                        judul = '$judul', deskripsi = '$deskripsi', batas_waktu = '$batas_waktu', file_soal = '$file_soal' 
                     WHERE id = '$soal[id_bank_soal]'";
-$result_bank_soal = mysqli_query($conn, $query_bank_soal);
+    $result_bank_soal = mysqli_query($conn, $query_bank_soal);
 
 if ($result_bank_soal) {
     $query_soal_update = "UPDATE soal 

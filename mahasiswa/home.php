@@ -35,7 +35,8 @@ $hari_indo = [
     'Wednesday' => 'Rabu',
     'Thursday' => 'Kamis',
     'Friday' => 'Jumat',
-    'Saturday' => 'Sabtu'
+    'Saturday' => 'Sabtu',
+    'Sunday' => 'Minggu'
 ];
 $hari = $hari_indo[$hari];
 
@@ -186,6 +187,7 @@ $jadwal_result = $stmt->get_result();
                     <p class="mb-1"><strong>Program Studi:</strong> <?php echo htmlspecialchars($mahasiswa['nama_prodi']); ?></p>
                     <p class="mb-1"><strong>Fakultas:</strong> <?php echo htmlspecialchars($mahasiswa['fakultas']); ?></p>
                     <p class="mb-1"><strong>IPK:</strong> <?php echo $ipk; ?></p>
+                    <p class="mb-1"><strong>Semester:</strong> <?php echo htmlspecialchars($mahasiswa['semester']); ?></p>
                     <p class="mb-1"><strong>Angkatan:</strong> <?php echo htmlspecialchars($mahasiswa['angkatan']); ?></p>
                 </div>
                 <div class="col-md-6">
@@ -236,7 +238,7 @@ $jadwal_result = $stmt->get_result();
                 </a>
             </div>
             <div class="col-md-4 mb-3">
-                <a href="tugas.php" class="text-decoration-none">
+                <a href="soal/soal.php" class="text-decoration-none">
                     <div class="feature-card text-center">
                         <i class="fas fa-tasks fa-3x mb-3 text-danger"></i>
                         <h4>Tugas</h4>

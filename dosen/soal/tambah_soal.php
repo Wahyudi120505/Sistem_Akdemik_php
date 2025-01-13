@@ -54,8 +54,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             break;
     }
    
-    $query_bank_soal = "INSERT INTO bank_soal (id_dosen, id_mata_kuliah, id_jenis_soal, judul, deskripsi, batas_waktu, STATUS) 
-                        VALUES ('$dosen_id', '$id_mata_kuliah', '$id_jenis_soal', '$judul', '$deskripsi', '$batas_waktu', '$status')";
+    $query_bank_soal = "INSERT INTO bank_soal (id_dosen, id_mata_kuliah, id_jenis_soal, judul, deskripsi, batas_waktu, status, file_soal) 
+        VALUES ('$dosen_id', '$id_mata_kuliah', '$id_jenis_soal', '$judul', '$deskripsi', '$batas_waktu', '$status', '$file_soal')";
     $result_bank_soal = mysqli_query($conn, $query_bank_soal);
 
     if ($result_bank_soal) {

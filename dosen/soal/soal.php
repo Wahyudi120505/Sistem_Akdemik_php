@@ -238,8 +238,7 @@ $result_soal = mysqli_query($conn, $query_soal);
                 if (mysqli_num_rows($result_soal) > 0) {
                     $no = 1;
                     while ($soal = mysqli_fetch_assoc($result_soal)): ?>
-                        <tr>
-                            <td><?php echo $no; ?></td>
+                        <tr onclick="window.location.href='cek.php?id=<?php echo $soal['bank_soal_id']; ?>'">                            <td><?php echo $no; ?></td>
                             <td><?php echo $soal['mata_kuliah_nama']; ?></td>
                             <td><?php echo $soal['jenis_soal_nama']; ?></td>
                             <td><?php echo $soal['bank_soal_judul']; ?></td>
