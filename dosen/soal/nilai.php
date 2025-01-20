@@ -47,7 +47,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id_mata_kuliah = $jawaban['mata_kuliah_id'];
         $semester = $jawaban['semester'];
 
-        $query_khs_all = "SELECT * FROM khs WHERE id_mahasiswa = '$id_mahasiswa'";
+        $query_khs_all = "SELECT * FROM khs 
+                            WHERE id_mahasiswa = '$id_mahasiswa' 
+                            AND id_mata_kuliah = '$id_mata_kuliah'";
         $result_khs = mysqli_query($conn, $query_khs_all);
         $khs = mysqli_fetch_assoc($result_khs);
 
@@ -56,10 +58,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $uts = $khs['uts'] ?? 0;
         $uas = $khs['uas'] ?? 0;
 
+        // Gunakan operator assignment biasa
         if ($jawaban['jenis_soal_nama'] === 'Tugas') $tugas += $nilai;
         if ($jawaban['jenis_soal_nama'] === 'Kuis') $kuis += $nilai;
-        if ($jawaban['jenis_soal_nama'] === 'Uts') $uts += $nilai;
-        if ($jawaban['jenis_soal_nama'] === 'Uas') $uas += $nilai;
+        if ($jawaban['jenis_soal_nama'] === 'UTS') $uts += $nilai;
+        if ($jawaban['jenis_soal_nama'] === 'UAS') $uas += $nilai;
 
         $query_total_sks = "SELECT SUM(mk.sks) AS total_sks
                                 FROM krs k
@@ -74,7 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $total_sks = 0; 
         }
 
-        $nilai_total_matkul = ($uts * 0.3) + ($kuis *= 0.2) + ($uas * 0.4) + ($tugas *= 0.1) ;
+        $nilai_total_matkul = ($uts * 0.3) + ($kuis * 0.2) + ($uas * 0.4) + ($tugas * 0.1);
         $grade = ($nilai_total_matkul >= 85) ? 'A' : (($nilai_total_matkul >= 70) ? 'B' : (($nilai_total_matkul >= 60) ? 'C' : (($nilai_total_matkul >= 50) ? 'D' : 'E')));
 
         switch($grade){
@@ -95,26 +98,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             break;
         }
 
-        // Menghitung nilai akhir
-        if ($total_sks > 0) {
-            $nilai_akhir = ($bobot * $jawaban['mata_kuliah_sks']) / $total_sks;
-        } else {
-            $nilai_akhir = 100; // Jika total_sks 0, nilai akhir menjadi 0
-        }
-
         if (mysqli_num_rows($result_khs) > 0) {
             $query_update_khs = "UPDATE khs SET 
                 tugas = '$tugas', 
                 kuis = '$kuis', 
                 uts = '$uts', 
                 uas = '$uas', 
-                nilai_angka = '$nilai_akhir', 
+                nilai_angka = '$nilai_total_matkul', 
                 nilai_huruf = '$grade'
                 WHERE id_mahasiswa = '$id_mahasiswa'";
             mysqli_query($conn, $query_update_khs);
         } else {
             $query_khs = "INSERT INTO khs (id_mahasiswa, id_mata_kuliah, nilai_angka, nilai_huruf, semester, tugas, kuis, uts, uas) 
-                VALUES ('$id_mahasiswa', '$id_mata_kuliah', '$nilai_akhir', '$grade', '$semester', '$tugas', '$kuis', '$uts', '$uas')";
+                VALUES ('$id_mahasiswa', '$id_mata_kuliah', '$nilai_total_matkul', '$grade', '$semester', '$tugas', '$kuis', '$uts', '$uas')";
             mysqli_query($conn, $query_khs);
         }
         echo "<script>alert('Nilai berhasil disimpan dan tabel KHS diperbarui!'); window.location.href='cek.php?id=" . $jawaban['soal_id'] . "';</script>";

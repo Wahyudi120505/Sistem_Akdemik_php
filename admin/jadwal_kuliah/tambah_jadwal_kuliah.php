@@ -8,54 +8,73 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
     exit;
 }
 
-$error_message = ""; // Variabel untuk menyimpan pesan kesalahan
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
+$error_message = "";
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Ambil data dari form
-    $mata_kuliah = $_POST['mata_kuliah'];
-    $hari = $_POST['hari'];
-    $jam_mulai = $_POST['jam_mulai'];
-    $jam_selesai = $_POST['jam_selesai'];
-    $ruangan = $_POST['ruangan'];
+    try {
+        // Ambil data dari form
+        $mata_kuliah = $_POST['mata_kuliah'];
+        $hari = $_POST['hari'];
+        $jam_mulai = $_POST['jam_mulai'];
+        $jam_selesai = $_POST['jam_selesai'];
+        $ruangan = $_POST['ruangan'];
 
-    // Ambil ID dosen dari mata kuliah yang dipilih
-    $query_dosen = "SELECT id_dosen FROM mata_kuliah WHERE id = ?";
-    $stmt_dosen = $conn->prepare($query_dosen);
-    $stmt_dosen->bind_param("i", $mata_kuliah);
-    $stmt_dosen->execute();
-    $result_dosen = $stmt_dosen->get_result();
-    
-    // Ambil ID dosen jika ada
-    if ($row_dosen = $result_dosen->fetch_assoc()) {
+        // Validasi mata_kuliah tidak kosong
+        if (empty($mata_kuliah)) {
+            throw new Exception("Mata kuliah harus dipilih!");
+        }
+
+        // Ambil ID dosen dari mata kuliah yang dipilih dengan validasi tambahan
+        $query_dosen = "SELECT id_dosen FROM mata_kuliah WHERE id = ? AND id_dosen IS NOT NULL";
+        $stmt_dosen = $conn->prepare($query_dosen);
+        $stmt_dosen->bind_param("i", $mata_kuliah);
+        $stmt_dosen->execute();
+        $result_dosen = $stmt_dosen->get_result();
+        
+        if ($result_dosen->num_rows === 0) {
+            throw new Exception("Mata kuliah ini belum memiliki dosen yang ditugaskan. Silakan pilih mata kuliah lain atau hubungi administrator.");
+        }
+
+        $row_dosen = $result_dosen->fetch_assoc();
         $dosen = $row_dosen['id_dosen'];
-    } else {
-        $dosen = null; // Set dosen ke null jika tidak ada data
-    }
 
-    if ($dosen === null) {
-        $error_message = "Dosen tidak ditemukan untuk mata kuliah ini!";
-        exit; // Hentikan proses jika dosen kosong
-    }
+        // Double check untuk memastikan id_dosen tidak null
+        if (empty($dosen)) {
+            throw new Exception("Data dosen tidak valid. Silakan pilih mata kuliah lain.");
+        }
 
-    // Cek apakah sudah ada jadwal kuliah yang sama
-    $query_check = "SELECT * FROM jadwal_kuliah 
-                   WHERE hari = ? 
-                   AND (
-                       (jam_mulai BETWEEN ? AND ?) 
-                       OR (jam_selesai BETWEEN ? AND ?) 
-                       OR (? BETWEEN jam_mulai AND jam_selesai)
-                   )
-                   AND (ruangan = ? OR id_dosen = ?)";
-    
-    $stmt_check = $conn->prepare($query_check);
-    $stmt_check->bind_param("ssssssss", $hari, $jam_mulai, $jam_selesai, $jam_mulai, $jam_selesai, $jam_mulai, $ruangan, $dosen);
-    $stmt_check->execute();
-    $result_check = $stmt_check->get_result();
+        // Cek jadwal yang bentrok
+        $query_check = "SELECT jk.*, mk.nama_mk, d.nama as nama_dosen 
+                       FROM jadwal_kuliah jk
+                       JOIN mata_kuliah mk ON jk.id_mata_kuliah = mk.id
+                       JOIN dosen d ON jk.id_dosen = d.id
+                       WHERE jk.hari = ? 
+                       AND (
+                           (jk.jam_mulai BETWEEN ? AND ?) 
+                           OR (jk.jam_selesai BETWEEN ? AND ?) 
+                           OR (? BETWEEN jk.jam_mulai AND jk.jam_selesai)
+                       )
+                       AND (jk.ruangan = ? OR jk.id_dosen = ?)";
+        
+        $stmt_check = $conn->prepare($query_check);
+        $stmt_check->bind_param("ssssssss", $hari, $jam_mulai, $jam_selesai, $jam_mulai, $jam_selesai, $jam_mulai, $ruangan, $dosen);
+        $stmt_check->execute();
+        $result_check = $stmt_check->get_result();
 
-    if ($result_check->num_rows > 0) {
-        // Jika ada tabrakan jadwal
-        $error_message = "Jadwal kuliah ini sudah ada pada waktu dan ruangan yang dipilih.";
-    } else {
+        if ($result_check->num_rows > 0) {
+            $bentrok = $result_check->fetch_assoc();
+            throw new Exception(
+                "Terjadi bentrok jadwal dengan:<br>" .
+                "Mata Kuliah: {$bentrok['nama_mk']}<br>" .
+                "Dosen: {$bentrok['nama_dosen']}<br>" .
+                "Waktu: {$bentrok['jam_mulai']} - {$bentrok['jam_selesai']}<br>" .
+                "Ruangan: {$bentrok['ruangan']}"
+            );
+        }
+
         // Query untuk menyimpan data jadwal kuliah
         $query = "INSERT INTO jadwal_kuliah (id_mata_kuliah, id_dosen, hari, jam_mulai, jam_selesai, ruangan)
                  VALUES (?, ?, ?, ?, ?, ?)";
@@ -64,44 +83,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->bind_param("iissss", $mata_kuliah, $dosen, $hari, $jam_mulai, $jam_selesai, $ruangan);
 
         if ($stmt->execute()) {
-            // Jika berhasil, redirect ke halaman jadwal_kuliah.php
             header("Location: jadwal_kuliah.php");
-            exit;
+            exit();
         } else {
-            $error_message = "Error: " . $stmt->error;
+            throw new Exception("Error saat menyimpan jadwal: " . $stmt->error);
         }
+        
+    } catch (Exception $e) {
+        $error_message = $e->getMessage();
     }
 }
 
-// Query untuk mendapatkan data mata kuliah dengan dosen
+// Query untuk mendapatkan data mata kuliah dengan dosen (hanya yang memiliki dosen)
 $query_matkul = "SELECT mk.id, mk.nama_mk, mk.sks, mk.id_dosen, d.nama as nama_dosen 
                  FROM mata_kuliah mk 
-                 LEFT JOIN dosen d ON mk.id_dosen = d.id";
+                 INNER JOIN dosen d ON mk.id_dosen = d.id
+                 ORDER BY mk.nama_mk ASC";
 $result_matkul = mysqli_query($conn, $query_matkul);
 
-// Store mata kuliah data with dosen information
+if (!$result_matkul) {
+    die("Error dalam query mata kuliah: " . mysqli_error($conn));
+}
+
+// Store mata kuliah data
 $matkul_data = array();
 while ($row = mysqli_fetch_assoc($result_matkul)) {
     $matkul_data[] = $row;
 }
 
-// Query untuk mendapatkan data dosen
-$query_dosen = "SELECT id, nama FROM dosen";
-$result_dosen = mysqli_query($conn, $query_dosen);
-
-// Store dosen data for JavaScript
-$dosen_data = array();
-while ($row = mysqli_fetch_assoc($result_dosen)) {
-    $dosen_data[] = $row;
-}
-
-// Reset the dosen result for the HTML select
-mysqli_data_seek($result_dosen, 0);
-
 // Query untuk mendapatkan data ruangan
-$query_ruangan = "SELECT id, nama_ruangan FROM ruangan";
+$query_ruangan = "SELECT id, nama_ruangan FROM ruangan ORDER BY nama_ruangan ASC";
 $result_ruangan = mysqli_query($conn, $query_ruangan);
+
+if (!$result_ruangan) {
+    die("Error dalam query ruangan: " . mysqli_error($conn));
+}
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -258,10 +276,12 @@ $result_ruangan = mysqli_query($conn, $query_ruangan);
                 <select id="mata_kuliah" name="mata_kuliah" class="form-select" required>
                     <option value="">Pilih Mata Kuliah</option>
                     <?php foreach ($matkul_data as $row): ?>
-                        <option value="<?= $row['id']; ?>" 
-                                data-sks="<?= $row['sks']; ?>"
-                                data-dosen="<?= $row['id_dosen']; ?>">
-                            <?= $row['nama_mk']; ?> (<?= $row['sks']; ?> SKS)
+                        <option value="<?= htmlspecialchars($row['id']); ?>" 
+                                data-sks="<?= htmlspecialchars($row['sks']); ?>"
+                                data-dosen="<?= htmlspecialchars($row['id_dosen']); ?>">
+                            <?= htmlspecialchars($row['nama_mk']); ?> 
+                            (<?= htmlspecialchars($row['sks']); ?> SKS) - 
+                            <?= htmlspecialchars($row['nama_dosen']); ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
@@ -286,7 +306,7 @@ $result_ruangan = mysqli_query($conn, $query_ruangan);
 
             <div class="mb-3">
                 <label for="jam_selesai" class="form-label">Jam Selesai</label>
-                <input type="time" id="jam_selesai" name="jam_selesai" class="form-control" readonly>
+                <input type="time" id="jam_selesai" name="jam_selesai" class="form-control" readonly required>
             </div>
 
             <div class="mb-3">
@@ -308,57 +328,44 @@ $result_ruangan = mysqli_query($conn, $query_ruangan);
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        const dosenData = <?= json_encode($dosen_data); ?>;
-        const matkulData = <?= json_encode($matkul_data); ?>;
+    const matkulData = <?= json_encode($matkul_data); ?>;
 
-        document.getElementById('mata_kuliah').addEventListener('change', function() {
-            const selectedOption = this.options[this.selectedIndex];
-            const dosenId = selectedOption.getAttribute('data-dosen');
-            const idDosen = selectedOption.getAttribute('id-dosen');
-            const dosenSelect = document.getElementById('dosen');
-            
-            // Reset dosen selection
-            dosenSelect.value = '';
-            
-            if (!isempety(dosenId)) {
-                dosenSelect.value = dosenId;
-                dosenSelect.disabled = true; // Disable dosen select jika sudah ada dosen yang dipilih otomatis
-            } else {
-                dosenSelect.disabled = false;
-            }
-            
-            // Call the existing function to calculate end time
-            hitungJamSelesai();
-        });
-
-        document.getElementById('jam_mulai').addEventListener('input', hitungJamSelesai);
+    document.getElementById('mata_kuliah').addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        const dosenId = selectedOption.getAttribute('data-dosen');
         
-        function hitungJamSelesai() {
-            let jamMulai = document.getElementById('jam_mulai').value;
-            let sks = document.querySelector('#mata_kuliah option:checked').dataset.sks;
-            if (!sks || !jamMulai) return;
-            
-            let jam = parseInt(jamMulai.split(':')[0]);
-            let menit = parseInt(jamMulai.split(':')[1]);
-            let totalMenit = sks * 50;
-            
-            let jamSelesai = new Date();
-            jamSelesai.setHours(jam);
-            jamSelesai.setMinutes(menit + totalMenit);
-            
-            let hasilJam = jamSelesai.getHours().toString().padStart(2, '0');
-            let hasilMenit = jamSelesai.getMinutes().toString().padStart(2, '0');
-            
-            document.getElementById('jam_selesai').value = `${hasilJam}:${hasilMenit}`;
-        }
+        // Call the existing function to calculate end time
+        hitungJamSelesai();
+    });
 
-        // Auto-hide error message
-        const errorMessage = document.getElementById('error_message');
-        if (errorMessage) {
-            setTimeout(() => {
-                errorMessage.style.display = 'none';
-            }, 3000);
-        }
-    </script>
+    document.getElementById('jam_mulai').addEventListener('input', hitungJamSelesai);
+    
+    function hitungJamSelesai() {
+        let jamMulai = document.getElementById('jam_mulai').value;
+        let sks = document.querySelector('#mata_kuliah option:checked').dataset.sks;
+        if (!sks || !jamMulai) return;
+        
+        let jam = parseInt(jamMulai.split(':')[0]);
+        let menit = parseInt(jamMulai.split(':')[1]);
+        let totalMenit = sks * 50;
+        
+        let jamSelesai = new Date();
+        jamSelesai.setHours(jam);
+        jamSelesai.setMinutes(menit + totalMenit);
+        
+        let hasilJam = jamSelesai.getHours().toString().padStart(2, '0');
+        let hasilMenit = jamSelesai.getMinutes().toString().padStart(2, '0');
+        
+        document.getElementById('jam_selesai').value = `${hasilJam}:${hasilMenit}`;
+    }
+
+    // Auto-hide error message
+    const errorMessage = document.getElementById('error_message');
+    if (errorMessage) {
+        setTimeout(() => {
+            errorMessage.style.display = 'none';
+        }, 1000000);
+    }
+</script>
 </body>
 </html>

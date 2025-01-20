@@ -18,15 +18,67 @@ $stmt->execute();
 $result = $stmt->get_result();
 $mahasiswa = $result->fetch_assoc();
 
-$ipk_query = "SELECT AVG(nilai_angka) as ipk 
-              FROM khs 
-              WHERE id_mahasiswa = ?";
-$stmt = $conn->prepare($ipk_query);
-$stmt->bind_param("i", $mahasiswa['id']);
-$stmt->execute();
-$ipk_result = $stmt->get_result();
-$ipk_data = $ipk_result->fetch_assoc();
-$ipk = number_format($ipk_data['ipk'], 2);
+// Ambil data transkrip nilai
+$query_nilai = "SELECT mk.kode_mk, mk.nama_mk, mk.sks, 
+                       k.tugas, k.kuis, k.uts, k.uas, 
+                       k.nilai_angka, k.nilai_huruf 
+                FROM khs k
+                JOIN mata_kuliah mk ON k.id_mata_kuliah = mk.id
+                WHERE k.id_mahasiswa = ?";
+$stmt_nilai = $conn->prepare($query_nilai);
+$stmt_nilai->bind_param("i", $mahasiswa['id']);
+$stmt_nilai->execute();
+$result_nilai = $stmt_nilai->get_result();
+
+// Ambil total SKS dari KRS
+$query_total_sks = "SELECT SUM(mk.sks) AS total_sks
+                    FROM krs k
+                    JOIN mata_kuliah mk ON k.id_mata_kuliah = mk.id
+                    WHERE k.id_mahasiswa = ?";
+$stmt_total_sks = $conn->prepare($query_total_sks);
+$stmt_total_sks->bind_param("i", $mahasiswa['id']);
+$stmt_total_sks->execute();
+$result_total_sks = $stmt_total_sks->get_result();
+$row_total_sks = $result_total_sks->fetch_assoc();
+$total_sks = $row_total_sks['total_sks'] ?: 0;
+
+// Hitung bobot dan nilai akhir
+$total_bobot_sks = 0;
+$total_sks_hitung = 0;
+
+while ($row = $result_nilai->fetch_assoc()) {
+    switch ($row['nilai_huruf']) {
+        case 'A':
+            $bobot = 4;
+            break;
+        case 'B':
+            $bobot = 3;
+            break;
+        case 'C':
+            $bobot = 2;
+            break;
+        case 'D':
+            $bobot = 1;
+            break;
+        case 'E':
+            $bobot = 0;
+            break;
+        default:
+            $bobot = 0;
+            break;
+    }
+
+    // Tambahkan nilai bobot * SKS untuk setiap mata kuliah
+    $total_bobot_sks += $bobot * $row['sks'];
+    $total_sks_hitung += $row['sks'];
+}
+
+// Menghitung nilai akhir
+if ($total_sks_hitung > 0) {
+    $ipk = $total_bobot_sks / $total_sks_hitung;
+} else {
+    $ipk = 0;
+}
 
 $hari = date('l');
 $hari_indo = [
@@ -193,7 +245,7 @@ $jadwal_result = $stmt->get_result();
                 <div class="col-md-6">
                     <div class="stats-card bg-primary text-white">
                         <h3 class="mb-2">IPK Kumulatif</h3>
-                        <h2 class="display-4 mb-0"><?php echo $ipk; ?></h2>
+                        <h2 class="display-4 mb-0"><?= htmlspecialchars(number_format($ipk, 2)) ?></h2>
                     </div>
                 </div>
             </div>
@@ -220,7 +272,7 @@ $jadwal_result = $stmt->get_result();
                 </a>
             </div>
             <div class="col-md-4 mb-3">
-                <a href="transkrip.php" class="text-decoration-none">
+                <a href="transkip/transkip.php" class="text-decoration-none">
                     <div class="feature-card text-center">
                         <i class="fas fa-file-alt fa-3x mb-3 text-success"></i>
                         <h4>Transkrip</h4>
