@@ -92,17 +92,26 @@ $hari_indo = [
 ];
 $hari = $hari_indo[$hari];
 
-$jadwal_query = "SELECT jk.*, mk.nama_mk, mk.kode_mk, d.nama as nama_dosen, r.nama_ruangan
-                 FROM jadwal_kuliah jk
-                 JOIN mata_kuliah mk ON jk.id_mata_kuliah = mk.id
-                 JOIN dosen d ON jk.id_dosen = d.id
-                 JOIN krs ON krs.id_mata_kuliah = mk.id
-                 JOIN ruangan r ON jk.ruangan = r.kode_ruangan
-                 WHERE krs.id_mahasiswa = ? AND jk.hari = ?";
+$jadwal_query = "SELECT jk.*, mk.nama_mk, mk.kode_mk, d.nama AS nama_dosen
+                    FROM jadwal_kuliah jk
+                    LEFT JOIN mata_kuliah mk ON jk.id_mata_kuliah = mk.id
+                    LEFT JOIN dosen d ON jk.id_dosen = d.id
+                    LEFT JOIN krs ON krs.id_mata_kuliah = mk.id
+                    LEFT JOIN ruangan r ON jk.ruangan = r.kode_ruangan
+                    WHERE krs.id_mahasiswa = ? AND jk.hari = ?";
 $stmt = $conn->prepare($jadwal_query);
 $stmt->bind_param("is", $mahasiswa['id'], $hari);
 $stmt->execute();
 $jadwal_result = $stmt->get_result();
+
+// var_dump($hari); // Untuk memeriksa nilai hari
+// var_dump($jadwal_result->num_rows); 
+// echo $jadwal_query; // Untuk melihat query yang digunakan
+// exit;
+
+// // var_dump($mahasiswa['id']); 
+// exit; 
+
 ?>
 
 <!DOCTYPE html>
@@ -327,7 +336,7 @@ $jadwal_result = $stmt->get_result();
                                 </p>
                                 <p class="mb-2">
                                     <i class="fas fa-door-open me-2"></i>
-                                    Ruang: <?php echo htmlspecialchars($jadwal['nama_ruangan']); ?>
+                                    Ruang: <?php echo htmlspecialchars($jadwal['ruangan']); ?>
                                 </p>
                                 <p class="mb-0">
                                     <i class="fas fa-chalkboard-teacher me-2"></i>
